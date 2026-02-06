@@ -513,6 +513,7 @@ def verify_tba_webhook_call(request: Any) -> bool:
     Returns:
         True if the webhook signature is valid, False otherwise
     """
+    import json
     json_str = json.dumps(request.data, ensure_ascii=True)
     hmac_hex = hmac.new(
         settings.TBA_WEBHOOK_SECRET.encode("utf-8"), json_str.encode("utf-8"), sha256
