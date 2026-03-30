@@ -117,7 +117,7 @@ class TestMatchViewPaths:
 
 @pytest.mark.django_db
 class TestScoutFieldScheduleViewPaths:
-    """Lines 458-469: POST scout schedule - access denied + exception"""
+    """Lines 458-469: POST scout schedule - access denied + exception + success"""
 
     def test_post_scout_schedule_access_denied(self, api_client):
         user = make_user("sfs_deny")
@@ -148,10 +148,26 @@ class TestScoutFieldScheduleViewPaths:
         assert response.status_code == 200
         assert "error" in str(response.data).lower() or "occurred" in str(response.data).lower()
 
+    def test_post_scout_schedule_success(self, api_client):
+        """Line 460: success path - save called and return message"""
+        user = make_user("sfs_ok")
+        api_client.force_authenticate(user=user)
+        with patch("scouting.admin.views.has_access", return_value=True), \
+             patch("scouting.admin.util.save_scout_schedule", return_value=MagicMock()):
+            response = api_client.post("/scouting/admin/scout-field-schedule/", {
+                "event_id": 1, "st_time": "2024-01-01T18:00:00Z",
+                "end_time": "2024-01-01T20:00:00Z",
+                "red_one_id": None, "red_two_id": None, "red_three_id": None,
+                "blue_one_id": None, "blue_two_id": None, "blue_three_id": None,
+                "void_ind": "n"
+            }, format="json")
+        assert response.status_code == 200
+        assert "saved" in str(response.data).lower() or "field schedule" in str(response.data).lower()
+
 
 @pytest.mark.django_db
 class TestScheduleViewPaths:
-    """Lines 497-508: POST schedule - access denied + exception"""
+    """Lines 497-508: POST schedule - access denied + exception + success"""
 
     def test_post_schedule_access_denied(self, api_client):
         user = make_user("sch_deny")
@@ -175,6 +191,18 @@ class TestScheduleViewPaths:
             }, format="json")
         assert response.status_code == 200
         assert "error" in str(response.data).lower() or "occurred" in str(response.data).lower()
+
+    def test_post_schedule_success(self, api_client):
+        """Line 499: success path"""
+        user = make_user("sch_ok")
+        api_client.force_authenticate(user=user)
+        with patch("scouting.admin.views.has_access", return_value=True), \
+             patch("scouting.admin.util.save_schedule", return_value=MagicMock()):
+            response = api_client.post("/scouting/admin/schedule/", {
+                "sch_typ": "pit", "st_time": "2024-01-01T18:00:00Z",
+                "end_time": "2024-01-01T20:00:00Z", "user": None, "void_ind": "n"
+            }, format="json")
+        assert response.status_code == 200
 
 
 @pytest.mark.django_db
@@ -203,16 +231,24 @@ class TestNotifyUserViewPaths:
 
 @pytest.mark.django_db
 class TestScoutingUserInfoViewPaths:
-    """Lines 568-569, 602: GET/POST scouting-user-info"""
+    """Lines 567-569, 602: GET/POST scouting-user-info"""
 
     def test_get_scouting_user_info_access_denied(self, api_client):
-        """Lines 568-569: access denied"""
         user = make_user("sui_deny")
         api_client.force_authenticate(user=user)
         with patch("scouting.admin.views.has_access", return_value=False):
             response = api_client.get("/scouting/admin/scouting-user-info/")
         assert response.status_code == 200
         assert "access" in str(response.data).lower()
+
+    def test_get_scouting_user_info_success(self, api_client):
+        """Lines 567-569: GET success path"""
+        user = make_user("sui_get")
+        api_client.force_authenticate(user=user)
+        with patch("scouting.admin.views.has_access", return_value=True), \
+             patch("scouting.admin.util.get_scouting_user_info", return_value=[]):
+            response = api_client.get("/scouting/admin/scouting-user-info/")
+        assert response.status_code == 200
 
     def test_post_scouting_user_info_success(self, api_client):
         """Line 602: POST save called successfully"""
@@ -221,8 +257,8 @@ class TestScoutingUserInfoViewPaths:
         with patch("scouting.admin.views.has_access", return_value=True), \
              patch("scouting.admin.util.save_scouting_user_info") as mock_save:
             response = api_client.post("/scouting/admin/scouting-user-info/", {
-                "user": {"id": user.id, "username": user.username, "first_name": user.first_name,
-                         "last_name": user.last_name, "email": user.email},
+                "user": {"id": user.id, "username": user.username, "first_name": "F",
+                         "last_name": "L", "email": user.email, "is_active": True},
                 "under_review": False,
                 "group_leader": False,
                 "eliminate_results": False,
@@ -231,8 +267,8 @@ class TestScoutingUserInfoViewPaths:
 
 
 @pytest.mark.django_db
-class TestMarkScoutPresentViewException:
-    """Lines 635-636: GET mark-scout-present - exception when no schedule found"""
+class TestMarkScoutPresentViewPaths:
+    """Lines 635-636: GET mark-scout-present"""
 
     def test_mark_scout_present_exception(self, api_client):
         user = make_user("msp_ex")
@@ -243,13 +279,46 @@ class TestMarkScoutPresentViewException:
         assert response.status_code == 200
         assert "error" in str(response.data).lower() or "occurred" in str(response.data).lower()
 
+    def test_mark_scout_present_success(self, api_client):
+        """Lines 635-636: success path"""
+        user = make_user("msp_ok")
+        api_client.force_authenticate(user=user)
+        mock_sfs = MagicMock()
+        with patch("scouting.admin.views.has_access", return_value=True), \
+             patch("scouting.util.get_scout_field_schedule", return_value=mock_sfs), \
+             patch("scouting.field.util.check_in_scout", return_value="Successfully checked in"):
+            response = api_client.get("/scouting/admin/mark-scout-present/?scout_field_sch_id=1&user_id=1")
+        assert response.status_code == 200
+
 
 @pytest.mark.django_db
 class TestFieldFormViewPaths:
-    """Lines 732-733, 749: POST field-form - save called + access denied"""
+    """Lines 732-733, 749: FieldFormView GET success, POST invalid data + access denied"""
+
+    def test_get_field_form_success(self, api_client):
+        """Lines 732-733: GET success path"""
+        user = make_user("ff_get")
+        api_client.force_authenticate(user=user)
+        with patch("scouting.util.get_field_form", return_value={"id": 1, "season_id": 1}):
+            response = api_client.get("/scouting/admin/field-form/")
+        assert response.status_code == 200
+
+    def test_post_field_form_invalid_data(self, api_client):
+        """Line 749: POST - has_access=True but serializer invalid"""
+        user = make_user("ff_inv")
+        api_client.force_authenticate(user=user)
+        with patch("scouting.admin.views.has_access", return_value=True), \
+             patch("scouting.admin.views.FieldFormSerializer") as mock_ser_cls:
+            mock_ser = MagicMock()
+            mock_ser.is_valid.return_value = False
+            mock_ser.errors = {"img": ["bad file"]}
+            mock_ser_cls.return_value = mock_ser
+            response = api_client.post("/scouting/admin/field-form/", {}, format="json")
+        assert response.status_code == 200
+        assert "invalid" in str(response.data).lower() or "error" in str(response.data).lower()
 
     def test_post_field_form_save_success(self, api_client):
-        """Lines 732-733: save called successfully"""
+        """POST save called successfully"""
         user = make_user("ff_save")
         api_client.force_authenticate(user=user)
         with patch("scouting.admin.views.has_access", return_value=True), \
@@ -260,7 +329,7 @@ class TestFieldFormViewPaths:
         assert response.status_code == 200
 
     def test_post_field_form_access_denied(self, api_client):
-        """Line 749: access denied"""
+        """Access denied"""
         user = make_user("ff_deny")
         api_client.force_authenticate(user=user)
         with patch("scouting.admin.views.has_access", return_value=False):
