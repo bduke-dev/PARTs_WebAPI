@@ -91,6 +91,7 @@ class TestUserProfileViewPutException:
     """Line 418: PUT UserProfile - exception during save"""
 
     def test_put_user_generic_exception(self, api_client, system_user):
+        # system_user creates user with id=-1 needed by ret_message error logging
         user = User.objects.create_user(
             username="putex", email="putex@example.com", password="pass",
             first_name="Put", last_name="Ex"
@@ -117,6 +118,7 @@ class TestResetPasswordViewTokenNone:
     """Line 647: ResetPasswordView POST - when token=None path"""
 
     def test_reset_password_token_none_path(self, api_client, system_user):
+        # system_user creates user with id=-1 needed by ret_message error logging
         user = User.objects.create_user(
             username="resetpw", email="resetpw@example.com", password="OldPass1!"
         )

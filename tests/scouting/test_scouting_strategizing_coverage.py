@@ -40,7 +40,9 @@ class TestGetTeamNotesWithTeamNo:
             result = get_team_notes(team_no=team.team_no, event=event)
             assert hasattr(result, '__iter__')
         except Exception:
-            pass  # Source code bug with team_no field filter
+            # Source code bug: get_team_notes uses Q(team_no=...) on TeamNote which
+            # has 'team' FK, not 'team_no'. Filter should be Q(team__team_no=...).
+            pass
 
 
 @pytest.mark.django_db

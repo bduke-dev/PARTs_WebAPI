@@ -100,7 +100,9 @@ class TestDeleteSeasonWithQuestions:
                     result = delete_season(season.id)
                     assert result is not None
                 except AttributeError:
-                    pass  # questionaggregate_set is a known source code bug
+                    # Known source code bug: delete_season uses questionaggregate_set
+                    # but the correct accessor is questionaggregatequestion_set
+                    pass
 
 
 @pytest.mark.django_db
